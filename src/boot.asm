@@ -6,90 +6,103 @@ CODE_OFFSET equ 0x8
 DATA_OFFSET equ 0x10
 
 KERNEL_LOAD_SEG equ 0x1000
-KERNEL_START_ADDR equ 0x100000
+KERNEL_START_ADDR equ 0x00100000
 
 
 
 start:
-    cli          
-    mov ax, 0x00 
-    mov ds, ax    
-    mov es, ax    
-    mov ss, ax    
-    mov sp, 0x7c00
-    sti           
-    
+	cli          
+	xor ax, ax 
+	mov ds, ax    
+	mov es, ax    
+	mov ss, ax    
+	mov sp, 0x7C00
+	sti           
+
+	in   al, 0x92
+	or   al, 0x02        ; setează bitul 1 -> activează A20
+	and  al, 0xFE        ; curăță bitul 0 (evită reset)
+	out  0x92, al
 
 ;Load kernel
-mov bx, KERNEL_LOAD_SEG
-mov dh, 0x00
-mov dl, 0x80
-mov cl, 0x02
-mov ch, 0x00
-mov ah, 0x02
-mov al, 8
-int 0x13
+	mov ax, KERNEL_LOAD_SEG
+	mov es, ax
+	xor bx, bx
+	
+	mov dh, 0x00
+	mov dl, 0x80
+	mov ch, 0x00
+	mov cl, 0x02
+	mov ah, 0x02
+	mov al, 8
+	int 0x13
 
-jc disk_read_error
+	jc disk_read_error
 
 
 load_PM:
-    cli
-    lgdt[gdt_descriptor]
-    mov eax, cr0
-    or al, 1
-    mov cr0, eax
-    jmp CODE_OFFSET:PModeMain
+	cli
+	lgdt [gdt_descriptor]
+	
+	mov eax, cr0
+	or eax, 1
+	mov cr0, eax
+	
+	jmp CODE_OFFSET:PModeMain
 
 
 disk_read_error:
-    hlt
+	hlt
 
 ;GDT Implemetation
 
 gdt_start:
-    dd 0x0
-    dd 0x0
+	dd 0x0
+	dd 0x0
 
     ; Code segment descriptor
-    dw 0xFFFF       
-    dw 0x0000       
-    db 0x00         
-    db 10011010b    
-    db 11001111b   
-    db 0x00         
+	dw 0xFFFF       
+	dw 0x0000       
+	db 0x00         
+	db 10011010b    
+	db 11001111b   
+	db 0x00         
 
     ; Data segment descriptor
-    dw 0xFFFF       
-    dw 0x0000       
-    db 0x00         
-    db 10010010b    
-    db 11001111b    
-    db 0x00         
+	dw 0xFFFF       
+	dw 0x0000       
+	db 0x00         
+	db 10010010b    
+	db 11001111b    
+	db 0x00         
 
 gdt_end:
 
 gdt_descriptor:
-    dw gdt_end - gdt_start - 1 
-    dd gdt_start 
+	dw gdt_end - gdt_start - 1 
+	dd gdt_start 
 
 
 [BITS 32]
 PModeMain:
-    mov ax, DATA_OFFSET
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov ss, ax
-    mov gs, ax
-    mov ebp, 0x9C00
-    mov esp, ebp
+	mov ax, DATA_OFFSET
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov ss, ax
+	mov gs, ax
+	
+	mov ebp, 0x9C00
+	mov esp, ebp
 
-    in al, 0x92
-    or al, 2
-    out 0x92, al
-
-    jmp CODE_OFFSET:KERNEL_START_ADDR
+	cld
+	
+	mov esi, 0x00010000          ; sursă (unde a scris BIOS)
+	mov edi, KERNEL_START_ADDR   ; destinație lineară
+	mov ecx, (8 * 512) / 4  ; număr dword-uri de copiat
+	rep movsd
+	
+	jmp CODE_OFFSET:KERNEL_START_ADDR
 
 
 

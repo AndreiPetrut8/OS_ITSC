@@ -1,13 +1,24 @@
-void kernel_main(void) {
-    char* vidmem = (char*)0xB8000;
-    const char* msg = "Kernelul ruleaza!";
-    int i = 0;
+#include <stdint.h>
+#include "kernel.h"
 
-    while (msg[i]) {
-        vidmem[i * 2] = msg[i];
-        vidmem[i * 2 + 1] = 0x0F; // alb pe negru
-        i++;
+void kernel_main(void) {
+    const uint16_t WIDTH = 80;
+    const uint16_t HEIGHT = 25;
+    volatile uint16_t *vga = (uint16_t*)0xB8000;
+    uint8_t color = 0x0F;
+
+   
+    for(int i = 0; i < WIDTH * HEIGHT; i++){
+      vga[i] = 0x2000;
     }
 
-    for (;;) {} // loop infinit
+    const char msg[] = "Hello, VGA!";
+
+    for(int i = 0; i < 12; i++){
+      vga[i] = ((msg[i] << 8) | color);
+    }
+
+    for (;;) {
+        asm volatile("hlt");
+    }
 }

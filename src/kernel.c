@@ -1,10 +1,22 @@
 #include <stdint.h>
+#include "kernel.h"
 
 void kernel_main(void) {
+    const uint16_t WIDTH = 80;
+    const uint16_t HEIGHT = 25;
     volatile uint16_t *vga = (uint16_t*)0xB8000;
+    uint8_t color = 0x0F;
 
-    vga[0] = 0x0748; // 'H'
-    vga[1] = 0x0769; // 'i'
+   
+    for(int i = 0; i < WIDTH * HEIGHT; i++){
+      vga[i] = 0x2000;
+    }
+
+    const char msg[] = "Hello, VGA!";
+
+    for(int i = 0; i < 13; i++){
+      vga[i] = ((msg[i] << 8) | color);
+    }
 
     for (;;) {
         asm volatile("hlt");
