@@ -13,7 +13,7 @@ all:
 	dd if=/dev/zero bs=512 count=8 >> ./bin/os.bin
 
 run:
-	qemu-system-x86_64 -drive format=raw,file=./bin/os.bin
+	qemu-system-x86_64 -monitor stdio -drive format=raw,file=./bin/os.bin
 
 clean:
 	rm -f ./bin/boot.bin
