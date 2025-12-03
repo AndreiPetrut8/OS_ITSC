@@ -1,0 +1,1 @@
+La link-ing, se seteaza o variabila cu adresa de final a kernelului( de acolo incepe adresa heap-ului ), apoi se apeleaza kheap_init() in main-ul kernel-ului.
