@@ -1,0 +1,10 @@
+#pragma once
+#include <stdint.h>
+
+// Structura care definește starea regiștrilor pe stivă după pusha
+typedef struct {
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+} registers_t;
+
+// Inițializează sistemul de syscall
+void init_syscalls();

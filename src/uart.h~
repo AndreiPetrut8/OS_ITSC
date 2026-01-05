@@ -1,0 +1,18 @@
+#ifndef UART_H
+#define UART_H
+
+#include <stdint.h>
+
+#define COM1 0x3F8
+
+// Funcții de bază I/O
+void uart_init();
+void uart_putc(char c);
+char uart_getc();
+void uart_print(const char *s);
+
+// Funcții pentru Shell
+int  uart_received();
+void uart_readline(char* buffer, int max_len);
+
+#endif

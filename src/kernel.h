@@ -9,6 +9,9 @@ void kprint_int(int num);
 void kprint_hex(uint32_t n);
 void kprint_newline(void);
 void kclear_screen(void);
+void list_processes();
+void kill_process(int pid);
+void scheduler_tick();
 
 void kernel_main(void);
 

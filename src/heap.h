@@ -1,7 +1,6 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 void kheap_init(void *heap_base, size_t heap_size);
 

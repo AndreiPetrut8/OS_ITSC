@@ -1,0 +1,64 @@
+#include "idt.h"
+#include "kernel.h" // Pentru kprint
+
+// Structura unei intrări în IDT (hardware specific x86)
+struct idt_entry_t {
+    uint16_t offset_low;
+    uint16_t selector;
+    uint8_t  zero;
+    uint8_t  type_attr;
+    uint16_t offset_high;
+} __attribute__((packed));
+
+// Tabelul IDT cu 256 de intrări
+struct idt_entry_t idt[256];
+
+// Funcții externe din ASM
+extern void load_idt(void* base, uint16_t size);
+extern void isr_syscall_stub(void);
+
+// Funcție helper pentru a seta o intrare în IDT
+void idt_set_gate(int num, uint32_t base, uint16_t sel, uint8_t flags) {
+    idt[num].offset_low = base & 0xFFFF;
+    idt[num].offset_high = (base >> 16) & 0xFFFF;
+    idt[num].selector = sel;
+    idt[num].zero = 0;
+    idt[num].type_attr = flags; // 0x8E = 32bit Interrupt Gate, Ring 0
+}
+
+// Aici ajungem când se face INT 0x80
+void syscall_handler(registers_t* regs) {
+    // EAX conține numărul syscall-ului
+    // EBX, ECX, EDX conțin argumentele
+    
+    switch (regs->eax) {
+        case 0: // SYS_TEST - doar pentru verificare
+            kprint("[Syscall] Test called!\n");
+            break;
+            
+        case 1: // SYS_WRITE (Viitorul UART)
+            // Deocamdată simulăm folosind kprint, ca să vezi că merge
+            kprint("[Syscall] Write requested (UART pending)...\n");
+            
+            // AICI vei pune codul colegului tău:
+            // uart_write_string((char*)regs->ebx); 
+            break;
+
+        default:
+            kprint("[Syscall] Unknown syscall number!\n");
+            break;
+    }
+}
+
+void init_syscalls() {
+    // 0x08 este offset-ul segmentului de cod din GDT-ul tău (vezi boot.asm)
+    // 0x8E înseamnă: Present, Ring0, Interrupt Gate
+    // Setăm intrarea 0x80 (128) pentru syscalls
+    uint32_t isr_addr = (uint32_t)&isr_syscall_stub;
+    idt_set_gate(0x80, isr_addr, 0x08, 0x8E);
+
+    // Încărcăm IDT-ul în procesor
+    load_idt(idt, sizeof(idt) - 1);
+    
+    kprint("IDT Initialized. Syscalls ready on INT 0x80.\n");
+}
