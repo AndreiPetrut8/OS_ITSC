@@ -7,7 +7,7 @@ static inline void outb(uint16_t port, uint8_t val) {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
 }
 
-
+extern int current;
 extern void load_idt(void* base, uint16_t size);
 extern void isr_syscall_stub(void);
 
@@ -80,12 +80,19 @@ void syscall_handler(registers_t* regs) {
 
   case 1:
     {
+      int fd = regs->ebx;
+      char* buffer = (char*)regs->ecx;
+      uint32_t len = regs->edx;
 
-      char* buffer = (char*)regs->ebx;
-      uint32_t len = regs->ecx;
-
-      for (uint32_t i = 0; i < len; i++) {
-	uart_putc(buffer[i]);
+      if (fd == 1) {
+	uart_print(buffer);
+      } 
+      else if (fd == 2) {
+	char temp[len];
+	for (uint32_t i = 0; i < len; i++) {
+	  temp[i] = buffer[i];
+	}
+	kprint(temp);
       }
       regs->eax = len;
     }
@@ -93,6 +100,7 @@ void syscall_handler(registers_t* regs) {
 
   case 2:
     kprint("[Kernel] SYS_YIELD: Cedare procesor\n");
+    yield();
     break;
 
   case 3: 
@@ -105,6 +113,7 @@ void syscall_handler(registers_t* regs) {
 
   case 5: 
     kprint("[Kernel] SYS_EXIT: Proces terminat\n");
+    kill_process(current);
     break;
     
   default:

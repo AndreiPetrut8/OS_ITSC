@@ -11,6 +11,7 @@ void kprint_newline(void);
 void kclear_screen(void);
 void list_processes();
 void kill_process(int pid);
+void yield();
 void scheduler_tick();
 
 void kernel_main(void);

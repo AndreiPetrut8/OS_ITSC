@@ -1,0 +1,17 @@
+ENTRY(_start)
+SECTIONS
+{
+    /* Adresa va fi pasată ca argument din Makefile, dar aici definim ordinea */
+    .text : {
+        *(.text)
+    }
+    .rodata : {
+        *(.rodata)
+    }
+    .data : {
+        *(.data)
+    }
+    .bss : {
+        *(.bss)
+    }
+}

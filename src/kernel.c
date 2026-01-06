@@ -121,8 +121,8 @@ void process2() { kprint("[PID 2] Buna ziua\n"); }
 void process3() { kprint("[PID 3] Nihau\n"); }
 
 int nr_procese = 3;
-void (*processes[])() = {process1, process2, process3};
-int remaining[] = {10000, 12000, 15000};
+void (*processes[10])() = {process1, process2, process3};
+int remaining[10] = {10000, 12000, 15000};
 int current = 0;
 int slice = 0;
 int preemptive_mode = 0;
@@ -177,7 +177,7 @@ void scheduler_tick() {
 }
 
 void syscall_write(const char* message, uint32_t len) {
-  asm volatile("int $0x80" : : "a"(1), "b"(message), "c"(len));
+  asm volatile("int $0x80" : : "a"(1), "b"(1), "c"(message), "d"(len));
 }
 
 void syscall_yield() {
@@ -302,6 +302,9 @@ void shell_loop() {
 	  while(msg[len] != '\0')len++;
 	  syscall_write(msg, len);
 	}
+	else if (strncmp(cmd_buf, "yield", 5) == 0) {
+	  syscall_yield();
+	}
 	else if (strncmp(cmd_buf, "exec", 4) == 0) {
 	  char* msg = cmd_buf + 5;
 	  if(strcmp(msg, "u1") == 0){
@@ -324,6 +327,7 @@ void kernel_main(void) {
     kclear_screen();
     disable_cursor();
     kprint("Kernel is starting...\n");
+    uart_print("Booting OS...\n");
 
     void* heap_base = (void*)0x00200000;
     size_t heap_size = 100 * 1024; 

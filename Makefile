@@ -20,11 +20,11 @@ run:
 
 user_progs:
 	gcc $(FLAGS) -c src/u1.c -o build/u1.o
-	ld -m elf_i386 -Ttext 0x400000 --oformat binary build/u1.o -o bin/u1.bin
+	ld -m elf_i386 -T src/user.ld -Ttext 0x400000 --oformat binary build/u1.o -o bin/u1.bin
 	objcopy -I binary -O elf32-i386 -B i386 bin/u1.bin build/u1_bin.o
 
 	gcc $(FLAGS) -c src/u2.c -o build/u2.o
-	ld -m elf_i386 -Ttext 0x500000 --oformat binary build/u2.o -o bin/u2.bin
+	ld -m elf_i386 -T src/user.ld -Ttext 0x500000 --oformat binary build/u2.o -o bin/u2.bin
 	objcopy -I binary -O elf32-i386 -B i386 bin/u2.bin build/u2_bin.o
 
 
