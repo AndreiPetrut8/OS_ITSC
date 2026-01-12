@@ -46,4 +46,27 @@ isr_timer_stub:
 	popa
 	iretd
 	
+global _proc1_start
+global _proc1_end
+global _proc2_start
+global _proc2_end
+global _proc3_start
+global _proc3_end
+
+extern process1
+extern process2
+extern process3
+
+_proc1_start:
+    call process1
+_proc1_end:
+
+_proc2_start:
+    call process2
+_proc2_end:
+
+_proc3_start:
+    call process3
+_proc3_end:
+
 times 512-($ - $$) db 0

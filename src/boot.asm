@@ -20,14 +20,14 @@ start:
 	sti           
 
 	in   al, 0x92
-	or   al, 0x02        ; setează bitul 1 -> activează A20
-	and  al, 0xFE        
+	or   al, 0x02        ; Bit 1 = 1: Activează poarta A20
+	and  al, 0xFE        ; Bit 0 = 0: Previne resetarea
 	out  0x92, al
 
 ;Load kernel
-	mov ax, KERNEL_LOAD_SEG
-	mov es, ax
-	xor bx, bx
+	mov ax, KERNEL_LOAD_SEG		
+	mov es, ax		; ES = 0x1000 (Segmentul destinație)
+	xor bx, bx		; BX = 0x0000 (Offset-ul destinație)
 	
 	mov dh, 0x00
 	mov dl, 0x80
@@ -109,4 +109,4 @@ PModeMain:
 
 times 510 - ($ - $$) db 0   
 
-dw 0xAA55   
+dw 0xAA55

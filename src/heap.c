@@ -1,7 +1,8 @@
 #include "heap.h"
 #include "kernel.h"
+#include "uart.h"
 
-
+#define MAX_TEST_PROCESSES 10
 #define ALIGN_UP(x, a) (((x) + ((a)-1)) & ~((a)-1))
 #define ALIGN 8
 
@@ -251,25 +252,148 @@ size_t kheap_alloc_count(void)
     return alloc_count;
 }
 
-void kheap_dump(void) 
+void heap_dump(void) 
 {
-    kprint("KHEAP DUMP:\n");
-    kprint("  heap start: ");kprint_hex((uint32_t)(uintptr_t)heap_start);kprint("\n");
-    kprint("  heap end  : ");kprint_hex((uint32_t)(uintptr_t)heap_end);kprint("\n");
-    kprint("  bump ptr  : ");kprint_hex((uint32_t)(uintptr_t)heap_bump);kprint("\n");
-    kprint("  total     : ");kprint_int(kheap_total_size());kprint("bytes\n");
-    kprint("  used      : ");kprint_int(kheap_used_size());kprint("bytes\n");
-    kprint("  free      : ");kprint_int(kheap_free_size());kprint("bytes\n");
-    kprint("  allocs    : ");kprint_int(kheap_alloc_count());kprint("\n");
+    uart_print("KHEAP DUMP:\n");
+    uart_print("  heap start: ");uart_print_hex((uint32_t)(uintptr_t)heap_start);uart_print("\n");
+    uart_print("  heap end  : ");uart_print_hex((uint32_t)(uintptr_t)heap_end);uart_print("\n");
+    uart_print("  bump ptr  : ");uart_print_hex((uint32_t)(uintptr_t)heap_bump);uart_print("\n");
+    uart_print("  total     : ");uart_print_int(kheap_total_size());uart_print("bytes\n");
+    uart_print("  used      : ");uart_print_int(kheap_used_size());uart_print("bytes\n");
+    uart_print("  free      : ");uart_print_int(kheap_free_size());uart_print("bytes\n");
+    uart_print("  allocs    : ");uart_print_int(kheap_alloc_count());uart_print("\n");
 
-    kprint("  Free list blocks:\n");
+    uart_print("  Free list blocks:\n");
     block_header_t *cur = free_list;
     while (cur) 
     {
-      kprint("    block @ ");kprint_hex((uint32_t)(uintptr_t)cur);
-      kprint(": size= "); kprint_int(cur->size);
-      kprint("\n");
+      uart_print("    block @ ");uart_print_hex((uint32_t)(uintptr_t)cur);
+      uart_print(": size= "); uart_print_int(cur->size);
+      uart_print("\n");
         cur = cur->next;
     }
-    kprint("\n");
+    uart_print("\n");
 }
+
+// Heap test function
+
+void heap_test(void)
+{
+    uart_print("\n=== HEAP TEST START ===\n");
+
+    void *a = kmalloc(32);
+    uart_print("Allocated 32 bytes\n");
+    heap_dump(); 
+          
+    void *b = kmalloc(64);
+    uart_print("Allocated 64 bytes\n");
+    heap_dump();
+
+    kfree(a);
+    uart_print("Freed 32 bytes\n");
+    heap_dump();
+
+    void *c = kmalloc(16);
+    uart_print("Allocated 16 bytes\n");
+    heap_dump();
+    kfree(b);
+    uart_print("Freed 64 bytes\n");
+    heap_dump();
+
+    kfree(c);
+    uart_print("Freed 16 bytes\n");
+    heap_dump();
+
+    uart_print("=== HEAP TEST END ===\n\n");
+}
+
+extern uint8_t _proc1_start;
+extern uint8_t _proc1_end;
+extern uint8_t _proc2_start;
+extern uint8_t _proc2_end;
+extern uint8_t _proc3_start;
+extern uint8_t _proc3_end;
+
+extern int nr_procese;
+extern void (*processes[10])();
+
+extern process_info_t kernel_processes[];
+
+static inline uint32_t code_size(uint8_t *start, uint8_t *end)
+{
+    return (uint32_t)(end - start);
+}
+
+void heap_test_processes(void)
+{
+    uart_print("\n=== HEAP PROCESS CODE COPY TEST ===\n");
+
+    void *buffers[10];
+    uint32_t sizes[10];
+
+    for (int i = 0; i < nr_procese; i++)
+    {
+        void (*proc)() = processes[i];
+
+        uint8_t *start = NULL;
+        uint8_t *end = NULL;
+
+        for (int j = 0; j < 5; j++)
+        {
+            if (kernel_processes[j].entry == proc)
+            {
+                start = kernel_processes[j].start;
+                end   = kernel_processes[j].end;
+                break;
+            }
+        }
+
+        if (!start || !end)
+        {
+            uart_print("Skipping unknown process\n");
+            buffers[i] = NULL;
+            continue;
+        }
+
+        sizes[i] = code_size(start, end);
+
+        uart_print("Allocating heap for process ");
+        uart_print_int(i);
+        uart_print(" (");
+        uart_print_int(sizes[i]);
+        uart_print(" bytes)\n");
+
+        buffers[i] = kmalloc(sizes[i]);
+        if (!buffers[i])
+        {
+            uart_print("  ERROR: kmalloc failed\n");
+            continue;
+        }
+
+        uint8_t *dst = (uint8_t *)buffers[i];
+        uint8_t *src = start;
+
+        for (uint32_t b = 0; b < sizes[i]; b++)
+            dst[b] = src[b];
+    }
+
+    uart_print("\n--- HEAP STATE AFTER ALLOC ---\n");
+    heap_dump();
+
+    for (int i = 0; i < nr_procese; i++)
+    {
+        if (buffers[i])
+        {
+            uart_print("Freeing heap for process ");
+            uart_print_int(i);
+            uart_print("\n");
+            kfree(buffers[i]);
+        }
+    }
+
+    uart_print("\n--- HEAP STATE AFTER FREE ---\n");
+    heap_dump();
+
+    uart_print("=== HEAP PROCESS TEST END ===\n\n");
+}
+

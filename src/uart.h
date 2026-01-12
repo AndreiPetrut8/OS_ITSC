@@ -9,6 +9,7 @@ void uart_init();
 void uart_putc(char c);
 char uart_getc();
 void uart_print_int(int num);
+void uart_print_hex(uint32_t n);
 void uart_print(const char *s);
 
 int  uart_received();
