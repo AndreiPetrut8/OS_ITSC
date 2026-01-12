@@ -57,6 +57,15 @@ void uart_print_int(int num) {
     }
 }
 
+void uart_print_hex(uint32_t n) {
+    uart_print("0x");
+    char hex_chars[] = "0123456789ABCDEF";
+    for (int i = 28; i >= 0; i -= 4) {
+        int index = (n >> i) & 0xF;
+        uart_putc(hex_chars[index]);
+    }
+}
+
 void uart_print(const char *s) {
     while (*s) {
         if (*s == '\n') uart_putc('\r');

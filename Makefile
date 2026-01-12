@@ -1,7 +1,8 @@
 FILES = ./build/kernel.asm.o ./build/kernel.o ./build/heap.o ./build/idt.o ./build/uart.o ./build/u1_bin.o ./build/u2_bin.o
 FLAGS = -g -ffreestanding -m32 -fno-pic -fno-pie -fno-stack-protector -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
-all:
+
+all: user_progs
 	nasm -f bin ./src/boot.asm -o ./bin/boot.bin
 	nasm -f elf32 -g ./src/kernel.asm -o ./build/kernel.asm.o
 	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/kernel.c -o ./build/kernel.o
@@ -15,7 +16,7 @@ all:
 	dd if=./bin/kernel.bin >> ./bin/os.bin
 	dd if=/dev/zero bs=512 count=100 >> ./bin/os.bin
 
-run:
+run: all
 	qemu-system-x86_64 -serial stdio -drive format=raw,file=./bin/os.bin
 
 user_progs:

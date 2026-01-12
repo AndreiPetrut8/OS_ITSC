@@ -2,6 +2,7 @@
 #include "heap.h"
 #include "idt.h"
 #include "uart.h"
+#include "ramfs.h"
 
 #define VGA_ADDRESS ((volatile uint16_t*)0xB8000)
 #define VGA_WIDTH 80
@@ -19,12 +20,6 @@ extern uint8_t _binary_bin_u1_bin_start;
 extern uint8_t _binary_bin_u1_bin_end;
 extern uint8_t _binary_bin_u2_bin_start;
 extern uint8_t _binary_bin_u2_bin_end;
-
-typedef struct {
-    char* name;
-    uint8_t* data;
-    uint32_t size;
-} ramfs_entry_t;
 
 ramfs_entry_t ramfs[] = {
     {"u1", &_binary_bin_u1_bin_start, 0},
@@ -116,9 +111,9 @@ void simple_delay(int loops) {
 
 #define QUANTUM 4
 
-void process1() { kprint("[PID 1] Hello\n"); }
-void process2() { kprint("[PID 2] Buna ziua\n"); }
-void process3() { kprint("[PID 3] Nihau\n"); }
+void process1() {kprint("[PID 1] Hello\n");}
+void process2() {kprint("[PID 2] Buna ziua\n");}
+void process3() {kprint("[PID 3] Nihau\n");}
 
 int nr_procese = 3;
 void (*processes[10])() = {process1, process2, process3};
@@ -126,6 +121,25 @@ int remaining[10] = {10000, 12000, 15000};
 int current = 0;
 int slice = 0;
 int preemptive_mode = 0;
+
+//
+
+extern uint8_t _proc1_start;
+extern uint8_t _proc1_end;
+extern uint8_t _proc2_start;
+extern uint8_t _proc2_end;
+extern uint8_t _proc3_start;
+extern uint8_t _proc3_end;
+
+process_info_t kernel_processes[5] = {
+    {0x400000, &_binary_bin_u1_bin_start, &_binary_bin_u1_bin_end},
+    {0x500000, &_binary_bin_u2_bin_start, &_binary_bin_u2_bin_end},
+    {process1, &_proc1_start, &_proc1_end},
+    {process2, &_proc2_start, &_proc2_end},
+    {process3, &_proc3_start, &_proc3_end}
+};
+
+// Test function for heap.c
 
 void yield() {
     if (preemptive_mode) return;
@@ -316,6 +330,12 @@ void shell_loop() {
 	}
         else if (strcmp(cmd_buf, "help") == 0) {
             uart_print("Comenzi: help, ps, kill <pid>, exec <prog>\n");
+        }
+        else if (strcmp(cmd_buf, "mem") == 0) {
+            heap_test();
+        }
+        else if (strcmp(cmd_buf, "pmem") == 0) {
+            heap_test_processes();
         }
         else {
             uart_print("Eroare: Comanda necunoscuta.\n");
