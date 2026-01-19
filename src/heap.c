@@ -226,7 +226,6 @@ size_t kheap_total_size(void)
 
 size_t kheap_used_size(void) 
 {
-    size_t total = kheap_total_size();
     size_t free_sum = 0;
     block_header_t *cur = free_list;
     while (cur) 

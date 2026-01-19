@@ -132,8 +132,8 @@ extern uint8_t _proc3_start;
 extern uint8_t _proc3_end;
 
 process_info_t kernel_processes[5] = {
-    {0x400000, &_binary_bin_u1_bin_start, &_binary_bin_u1_bin_end},
-    {0x500000, &_binary_bin_u2_bin_start, &_binary_bin_u2_bin_end},
+    {(void (*)())0x400000, &_binary_bin_u1_bin_start, &_binary_bin_u1_bin_end},
+    {(void (*)())0x500000, &_binary_bin_u2_bin_start, &_binary_bin_u2_bin_end},
     {process1, &_proc1_start, &_proc1_end},
     {process2, &_proc2_start, &_proc2_end},
     {process3, &_proc3_start, &_proc3_end}
@@ -329,7 +329,7 @@ void shell_loop() {
 	    }
 	}
         else if (strcmp(cmd_buf, "help") == 0) {
-            uart_print("Comenzi: help, ps, kill <pid>, exec <prog>\n");
+            uart_print("Comenzi: \thelp - afisare comenzi\n\t\tps - afisare procese\n\t\tkill <pid> - terminare proces\n\t\texec <prog> - executare proces\n\t\tmem - heap test static\n\t\tpmem - heap test dinamic\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0) {
             heap_test();
