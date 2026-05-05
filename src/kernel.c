@@ -133,9 +133,9 @@ void simple_delay(int loops)
 // OPREA A FOST AICI
 ////////////////////////////////////////////////////////////////
 
-void process1() { kprint("[PID 1] Hello\n"); }
-void process2() { kprint("[PID 2] Buna ziua\n"); }
-void process3() { kprint("[PID 3] Nihau\n"); }
+void process1() { kprint("[PID 1] Petruț\n"); }
+void process2() { kprint("[PID 2] Mio\n"); }
+void process3() { kprint("[PID 3] Oprea\n"); }
 
 pcb_t proc_table[MAX_PROCESSES] = {
     {process1, 10000, PROC_READY, 0},
@@ -210,6 +210,23 @@ void scheduler_tick()
 
     update_waiting();
 
+    int has_ready = 0;
+    for (int i = 0; i < nr_procese; i++)
+    {
+        if (proc_table[i].state == PROC_READY || proc_table[i].state == PROC_RUNNING)
+        {
+            has_ready = 1;
+            break;
+        }
+    }
+
+    if (!has_ready)
+    {
+        kprint("[Idle] All processes WAITING - CPU idle\n");
+        simple_delay(50);
+        return;
+    }
+
     if (proc_table[current].state != PROC_RUNNING)
     {
         int next = pick_next_ready(current);
@@ -225,6 +242,9 @@ void scheduler_tick()
     proc_table[current].entry();
     proc_table[current].remaining--;
     slice++;
+
+    // Delay vizibil
+    simple_delay(20);
 
     if (proc_table[current].remaining <= 0)
     {
@@ -376,6 +396,42 @@ void kill_process(int pid)
     uart_print(" a fost marcat pentru terminare.\n");
 }
 
+////////////////////////////////////////////////////////////////
+// Comanda WAIT - blochez manual un proces
+////////////////////////////////////////////////////////////////
+
+void wait_process(int pid, int ticks)
+{
+    if (pid < 0 || pid >= nr_procese)
+    {
+        uart_print("Eroare: PID invalid\n");
+        return;
+    }
+
+    if (proc_table[pid].state == PROC_TERMINATED ||
+        proc_table[pid].state == PROC_UNUSED)
+    {
+        uart_print("Eroare: procesul nu este activ\n");
+        return;
+    }
+
+    if (ticks <= 0)
+        ticks = 10;
+
+    proc_table[pid].state = PROC_WAITING;
+    proc_table[pid].wait_ticks = ticks;
+
+    uart_print("Process ");
+    uart_print_int(pid);
+    uart_print(" -> WAITING for ");
+    uart_print_int(ticks);
+    uart_print(" ticks.\n");
+}
+
+////////////////////////////////////////////////////////////////
+// SFARSIT COMANDA WAIT
+////////////////////////////////////////////////////////////////
+
 void load_and_run(int program_index)
 {
     if (program_index < 0 || program_index > 1)
@@ -437,70 +493,108 @@ int strncmp(const char *s1, const char *s2, int n)
     return *(unsigned char *)s1 - *(unsigned char *)s2;
 }
 
-void shell_loop() {
+void shell_loop()
+{
     char cmd_buf[64];
-    
-    while(1) {
+
+    while (1)
+    {
         uart_print("user@simple_os:");
-        uart_print("> "); 
+        uart_print("> ");
         uart_readline(cmd_buf, 64);
 
-        if (strcmp(cmd_buf, "ps") == 0) {
+        if (strcmp(cmd_buf, "ps") == 0)
+        {
             asm volatile("cli");
             list_processes();
             asm volatile("sti");
-        } 
+        }
         /////////////////////////////
-        else if (strcmp(cmd_buf, "ls") == 0) {
+        else if (strcmp(cmd_buf, "ls") == 0)
+        {
             fs_ls();
         }
-        else if (strncmp(cmd_buf, "mkdir ", 6) == 0) {
+        else if (strncmp(cmd_buf, "mkdir ", 6) == 0)
+        {
             fs_mkdir(cmd_buf + 6);
         }
-        else if (strncmp(cmd_buf, "cd ", 3) == 0) {
+        else if (strncmp(cmd_buf, "cd ", 3) == 0)
+        {
             fs_cd(cmd_buf + 3);
         }
-        else if (strncmp(cmd_buf, "rm ", 3) == 0) {
+        else if (strncmp(cmd_buf, "rm ", 3) == 0)
+        {
             fs_rm(cmd_buf + 3);
         }
         ///////////////////////
-        else if (strncmp(cmd_buf, "kill ", 5) == 0) {
+        else if (strncmp(cmd_buf, "kill ", 5) == 0)
+        {
             int pid = cmd_buf[5] - '0';
             asm volatile("cli");
             kill_process(pid);
             asm volatile("sti");
-        }      
-	else if (strncmp(cmd_buf, "time", 4) == 0) {
-	  uint32_t t = syscall_gettime();
-	  uart_print("Ticks de la boot: ");
-	  uart_print_int(t);
-	  uart_print("\n");
-	}
-	else if (strncmp(cmd_buf, "write", 5) == 0) {
-	  char* msg = cmd_buf + 6;
-	  uint32_t len = 0;
-	  while(msg[len] != '\0')len++;
-	  syscall_write(msg, len);
-	}
-	else if (strncmp(cmd_buf, "yield", 5) == 0) {
-	  syscall_yield();
-	}
-	else if (strncmp(cmd_buf, "exec", 4) == 0) {
-	  char* msg = cmd_buf + 5;
-	  if(strcmp(msg, "u1") == 0){
-	      load_and_run(0);
-	    }
-	  else if(strcmp(msg, "u2") == 0){
-	      load_and_run(1);
-	    }
-	}
-       else if (strcmp(cmd_buf, "help") == 0) {
+        }
+        else if (strncmp(cmd_buf, "wait ", 5) == 0)
+        {
+            int pid = cmd_buf[5] - '0';
+            int ticks = 0;
+            if (cmd_buf[6] == ' ')
+            {
+                int i = 7;
+                while (cmd_buf[i] >= '0' && cmd_buf[i] <= '9')
+                {
+                    ticks = ticks * 10 + (cmd_buf[i] - '0');
+                    i++;
+                }
+            }
+            asm volatile("cli");
+            wait_process(pid, ticks);
+            asm volatile("sti");
+        }
+        else if (strncmp(cmd_buf, "time", 4) == 0)
+        {
+            uint32_t t = syscall_gettime();
+            uart_print("Ticks de la boot: ");
+            uart_print_int(t);
+            uart_print("\n");
+        }
+        else if (strncmp(cmd_buf, "write", 5) == 0)
+        {
+            char *msg = cmd_buf + 6;
+            uint32_t len = 0;
+            while (msg[len] != '\0')
+                len++;
+            syscall_write(msg, len);
+        }
+        else if (strncmp(cmd_buf, "yield", 5) == 0)
+        {
+            syscall_yield();
+        }
+        else if (strncmp(cmd_buf, "exec", 4) == 0)
+        {
+            char *msg = cmd_buf + 5;
+            if (strcmp(msg, "u1") == 0)
+            {
+                load_and_run(0);
+            }
+            else if (strcmp(msg, "u2") == 0)
+            {
+                load_and_run(1);
+            }
+        }
+        else if (strcmp(cmd_buf, "help") == 0)
+        {
             uart_print("Comenzi Sistem de Fisiere:\n");
             uart_print("  ls             - Listeaza fisierele\n");
             uart_print("  mkdir <nume>   - Creaza director\n");
             uart_print("  cd <nume>      - Schimba directorul (.. pt inapoi)\n");
             uart_print("  rm <nume>      - Sterge fisier/director\n");
-            uart_print("Alte comenzi: ps, kill, exec, mem, pmem, time\n");
+            uart_print("Comenzi Procese:\n");
+            uart_print("  ps             - Listeaza procesele si starile lor\n");
+            uart_print("  kill <pid>     - Termina un proces\n");
+            uart_print("  wait <pid> [t] - Pune un proces in WAITING (t ticks, default 10)\n");
+            uart_print("  exec <prog>    - Executa un program (u1, u2)\n");
+            uart_print("Alte comenzi: mem, pmem, time, yield, write, save\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0)
         {
@@ -510,11 +604,13 @@ void shell_loop() {
         {
             heap_test_processes();
         }
-	else if (strcmp(cmd_buf, "save") == 0) {
-	  fs_save_to_disk();
-}
-        
-        else {
+        else if (strcmp(cmd_buf, "save") == 0)
+        {
+            fs_save_to_disk();
+        }
+
+        else
+        {
             uart_print("Eroare: Comanda necunoscuta.\n");
         }
     }
@@ -524,7 +620,7 @@ void kernel_main(void)
 {
     kclear_screen();
     disable_cursor();
-    
+
     kprint("Kernel is starting...\n");
     uart_print("Booting OS...\n");
 
@@ -537,13 +633,12 @@ void kernel_main(void)
 
     preemptive_mode = 1;
 
-    //init file system
-    fs_init(); 
+    // init file system
+    fs_init();
 
     init_interrupts();
     init_syscalls();
 
-   
     ramfs[0].size = (uint32_t)&_binary_bin_u1_bin_end - (uint32_t)&_binary_bin_u1_bin_start;
     ramfs[1].size = (uint32_t)&_binary_bin_u2_bin_end - (uint32_t)&_binary_bin_u2_bin_start;
 
@@ -554,7 +649,6 @@ void kernel_main(void)
         asm volatile("hlt");
     }
 }
-
 
 /*
 void kernel_main(void) {
