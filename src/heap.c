@@ -314,7 +314,7 @@ extern uint8_t _proc3_start;
 extern uint8_t _proc3_end;
 
 extern int nr_procese;
-extern void (*processes[10])();
+extern pcb_t proc_table[MAX_PROCESSES];
 
 extern process_info_t kernel_processes[];
 
@@ -332,7 +332,7 @@ void heap_test_processes(void)
 
     for (int i = 0; i < nr_procese; i++)
     {
-        void (*proc)() = processes[i];
+        void (*proc)() = proc_table[i].entry;
 
         uint8_t *start = NULL;
         uint8_t *end = NULL;
