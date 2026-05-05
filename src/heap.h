@@ -25,3 +25,5 @@ size_t kheap_alloc_count(void);
 
 void heap_test(void);
 void heap_test_processes(void);
+
+void heap_dump(void);
