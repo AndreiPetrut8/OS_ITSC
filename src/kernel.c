@@ -546,12 +546,6 @@ void kernel_main(void)
    
     ramfs[0].size = (uint32_t)&_binary_bin_u1_bin_end - (uint32_t)&_binary_bin_u1_bin_start;
     ramfs[1].size = (uint32_t)&_binary_bin_u2_bin_end - (uint32_t)&_binary_bin_u2_bin_start;
-<<<<<<< HEAD
-=======
-    
-  
-    shell_loop(); 
->>>>>>> filesystem
 
     shell_loop();
 
