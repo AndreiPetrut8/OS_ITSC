@@ -3,6 +3,8 @@
 #include "idt.h"
 #include "uart.h"
 #include "ramfs.h"
+#include "fs.h"
+#include "ata.h"
 
 static int vga_col = 0;
 static int vga_row = 0;
@@ -435,62 +437,70 @@ int strncmp(const char *s1, const char *s2, int n)
     return *(unsigned char *)s1 - *(unsigned char *)s2;
 }
 
-void shell_loop()
-{
+void shell_loop() {
     char cmd_buf[64];
-
-    while (1)
-    {
-        uart_print("user@simple_os> ");
+    
+    while(1) {
+        uart_print("user@simple_os:");
+        uart_print("> "); 
         uart_readline(cmd_buf, 64);
 
-        if (strcmp(cmd_buf, "ps") == 0)
-        {
+        if (strcmp(cmd_buf, "ps") == 0) {
             asm volatile("cli");
             list_processes();
             asm volatile("sti");
+        } 
+        /////////////////////////////
+        else if (strcmp(cmd_buf, "ls") == 0) {
+            fs_ls();
         }
-        else if (strncmp(cmd_buf, "kill ", 5) == 0)
-        {
+        else if (strncmp(cmd_buf, "mkdir ", 6) == 0) {
+            fs_mkdir(cmd_buf + 6);
+        }
+        else if (strncmp(cmd_buf, "cd ", 3) == 0) {
+            fs_cd(cmd_buf + 3);
+        }
+        else if (strncmp(cmd_buf, "rm ", 3) == 0) {
+            fs_rm(cmd_buf + 3);
+        }
+        ///////////////////////
+        else if (strncmp(cmd_buf, "kill ", 5) == 0) {
             int pid = cmd_buf[5] - '0';
             asm volatile("cli");
             kill_process(pid);
             asm volatile("sti");
-        }
-        else if (strncmp(cmd_buf, "time", 4) == 0)
-        {
-            uint32_t t = syscall_gettime();
-            uart_print("Ticks de la boot: ");
-            uart_print_int(t);
-            uart_print("\n");
-        }
-        else if (strncmp(cmd_buf, "write", 5) == 0)
-        {
-            char *msg = cmd_buf + 6;
-            uint32_t len = 0;
-            while (msg[len] != '\0')
-                len++;
-            syscall_write(msg, len);
-        }
-        else if (strncmp(cmd_buf, "yield", 5) == 0)
-        {
-            syscall_yield();
-        }
-        else if (strncmp(cmd_buf, "exec", 4) == 0)
-        {
-            char *msg = cmd_buf + 5;
-            if (strcmp(msg, "u1") == 0)
-            {
-                load_and_run(0);
-            }
-            else if (strcmp(msg, "u2") == 0)
-            {
-                load_and_run(1);
-            }
-        }
-        else if (strcmp(cmd_buf, "help") == 0)
-        {
-            uart_print("Comenzi: \thelp - afisare comenzi\n\t\tps - afisare procese\n\t\tkill <pid> - terminare proces\n\t\texec <prog> - executare proces\n\t\tmem - heap test static\n\t\tpmem - heap test dinamic\n");
+        }      
+	else if (strncmp(cmd_buf, "time", 4) == 0) {
+	  uint32_t t = syscall_gettime();
+	  uart_print("Ticks de la boot: ");
+	  uart_print_int(t);
+	  uart_print("\n");
+	}
+	else if (strncmp(cmd_buf, "write", 5) == 0) {
+	  char* msg = cmd_buf + 6;
+	  uint32_t len = 0;
+	  while(msg[len] != '\0')len++;
+	  syscall_write(msg, len);
+	}
+	else if (strncmp(cmd_buf, "yield", 5) == 0) {
+	  syscall_yield();
+	}
+	else if (strncmp(cmd_buf, "exec", 4) == 0) {
+	  char* msg = cmd_buf + 5;
+	  if(strcmp(msg, "u1") == 0){
+	      load_and_run(0);
+	    }
+	  else if(strcmp(msg, "u2") == 0){
+	      load_and_run(1);
+	    }
+	}
+       else if (strcmp(cmd_buf, "help") == 0) {
+            uart_print("Comenzi Sistem de Fisiere:\n");
+            uart_print("  ls             - Listeaza fisierele\n");
+            uart_print("  mkdir <nume>   - Creaza director\n");
+            uart_print("  cd <nume>      - Schimba directorul (.. pt inapoi)\n");
+            uart_print("  rm <nume>      - Sterge fisier/director\n");
+            uart_print("Alte comenzi: ps, kill, exec, mem, pmem, time\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0)
         {
@@ -500,8 +510,11 @@ void shell_loop()
         {
             heap_test_processes();
         }
-        else
-        {
+	else if (strcmp(cmd_buf, "save") == 0) {
+	  fs_save_to_disk();
+}
+        
+        else {
             uart_print("Eroare: Comanda necunoscuta.\n");
         }
     }
@@ -511,6 +524,7 @@ void kernel_main(void)
 {
     kclear_screen();
     disable_cursor();
+    
     kprint("Kernel is starting...\n");
     uart_print("Booting OS...\n");
 
@@ -523,13 +537,21 @@ void kernel_main(void)
 
     preemptive_mode = 1;
 
+    //init file system
+    fs_init(); 
+
     init_interrupts();
     init_syscalls();
 
-    kprint("Interrupts and Timer are now active.\n");
-
+   
     ramfs[0].size = (uint32_t)&_binary_bin_u1_bin_end - (uint32_t)&_binary_bin_u1_bin_start;
     ramfs[1].size = (uint32_t)&_binary_bin_u2_bin_end - (uint32_t)&_binary_bin_u2_bin_start;
+<<<<<<< HEAD
+=======
+    
+  
+    shell_loop(); 
+>>>>>>> filesystem
 
     shell_loop();
 
@@ -538,6 +560,8 @@ void kernel_main(void)
         asm volatile("hlt");
     }
 }
+
+
 /*
 void kernel_main(void) {
     // 1. Inițializare Video

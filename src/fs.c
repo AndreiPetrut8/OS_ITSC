@@ -1,0 +1,161 @@
+#include <stdint.h>
+#include "fs.h"
+#include "uart.h"
+#include "heap.h"
+#include "ata.h"
+
+#define MAX_NAME_LEN 32
+#define FS_START_SECTOR 100
+#define MAX_DISK_NODES 16
+
+typedef struct {
+    char name[MAX_NAME_LEN];
+    int type;
+    int is_used;
+    int parent_idx;
+  
+} disk_entry_t;
+
+static fs_node_t *root = NULL;
+static fs_node_t *current_dir = NULL;
+
+
+
+
+
+int m_strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+	s2++;
+    }
+    return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+char* strcpy(char* dest, const char* src) {
+    char* d = dest;
+    while ((*d++ =*src++));
+    return dest;
+}
+
+fs_node_t* create_node(const char *name, entry_type_t type) {
+    fs_node_t *node = (fs_node_t*)kmalloc(sizeof(fs_node_t));
+    if (!node) return NULL;
+
+    int i;
+    for (i = 0; i < MAX_NAME_LEN - 1 && name[i] != '\0'; i++) 
+        node->name[i] = name[i];
+    
+    node->name[i] = '\0';
+    node->type = type;
+    node->data = NULL;
+    node->size = 0;
+    node->parent = NULL;
+    node->children = NULL;
+    node->next = NULL;
+    
+    return node;
+}
+
+void fs_init() {
+    disk_entry_t table[MAX_DISK_NODES];
+    ata_read_sector(FS_START_SECTOR, (uint8_t*)table);
+
+    if (table[0].is_used == 1 && m_strcmp(table[0].name, "root") == 0) {
+        uart_print("FS: Restaurare sistem de fisiere...\n");
+        
+        root = create_node(table[0].name, table[0].type);
+        current_dir = root;
+        for (int i=1; i<MAX_DISK_NODES;i++) {
+            if (table[i].is_used) {
+                fs_node_t *new_node = create_node(table[i].name,table[i].type);
+                new_node->parent =root;
+                new_node->next =root->children;
+                root->children = new_node;
+            }}
+    } else {
+        uart_print("FS: Creare sistem nou (Disc gol).\n");
+        root = create_node("root", FS_DIRECTORY);
+        current_dir = root;
+    }
+}
+
+void fs_save_to_disk() {
+    disk_entry_t table[MAX_DISK_NODES];
+    for(int i=0; i < MAX_DISK_NODES; i++) table[i].is_used = 0;
+
+    // root pe 0
+    table[0].is_used = 1;
+    strcpy(table[0].name, root->name);
+    table[0].type = root->type;
+    table[0].parent_idx =-1;
+
+     int idx = 1;
+    fs_node_t *child =root->children;
+    while (child &&idx<MAX_DISK_NODES) {
+        table[idx].is_used = 1;
+        strcpy(table[idx].name, child->name);
+        table[idx].type= child->type;
+        table[idx].parent_idx = 0; // index root
+        idx++;
+        child = child->next;
+    }
+    ata_write_sector(FS_START_SECTOR, (uint8_t*)table);
+    uart_print("FS: Salvat pe disc.\n");
+}
+
+int fs_mkdir(const char *name){
+    fs_node_t *new_dir = create_node(name, FS_DIRECTORY);
+    if (!new_dir){
+      return -1;
+    }
+    new_dir->parent = current_dir;
+    new_dir->next=current_dir->children;
+    current_dir->children = new_dir;
+    return 0;}
+
+int fs_cd(const char *name) {
+    if (m_strcmp(name, "..") == 0) {
+        if (current_dir->parent)
+	  current_dir = current_dir->parent;
+        return 0;
+    }
+    fs_node_t *curr = current_dir->children;
+    while (curr) {
+        if (curr->type ==FS_DIRECTORY && m_strcmp(name, curr->name)== 0) {
+            current_dir =curr;
+            return 0;
+        }
+        curr = curr->next;
+    }
+    uart_print("Director negasit.\n");
+    return -1;
+}
+
+void fs_ls(void) {
+    fs_node_t *curr = current_dir->children;
+    uart_print("Locatie: "); uart_print(current_dir->name); uart_print("\n");
+    while (curr) {
+        uart_print(curr->type == FS_DIRECTORY ? "[DIR] " : "[FILE] ");
+        uart_print(curr->name); uart_print("\n");
+        curr = curr->next;
+    }
+}
+
+void fs_rm(const char *name) {
+    fs_node_t *current= current_dir->children;
+    fs_node_t *prev =NULL;
+    while (current) {
+        if (m_strcmp(name, current->name)== 0) {
+            if (prev)
+	      {prev->next=current->next;
+	      }
+            else {
+	      current_dir->children=current->next;
+	    }
+            kfree(current);
+            return;
+        }
+        prev=current;
+        current=current->next;
+    }
+}
