@@ -2,25 +2,13 @@ ENTRY(_start)
 OUTPUT_FORMAT(binary)
 SECTIONS
 {
-    . = 0x0100000;
-    .text :
-    {
-        *(.text)
-    }
-
-    .rodata :
-    {
-        *(.rodata)
-    }
-
-    .data :
-    {
-        *(.data)
-    }
-
-    .bss :
-    {
-        *(COMMON)
-        *(.bss)
+    . = 0x00100000;
+    .text : { *(.text) }
+    .rodata : { *(.rodata) }
+    .data : { *(.data) }
+    .bss : {
+        _bss_start = .;
+        *(.bss COMMON)
+        _bss_end = .;
     }
 }

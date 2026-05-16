@@ -6,6 +6,11 @@ FILES = ./build/kernel.asm.o \
         ./build/ata.o \
         ./build/idt.o \
         ./build/uart.o \
+	./build/pipe.o \
+	./build/pmm.o \
+        ./build/vmm.o \
+	./build/gdt.o \
+        ./build/tss.o \
         ./build/u1_bin.o \
         ./build/u2_bin.o
 
@@ -26,6 +31,11 @@ all: user_progs
 	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/ata.c -o ./build/ata.o
 	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/idt.c -o ./build/idt.o
 	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/uart.c -o ./build/uart.o
+	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/pipe.c -o ./build/pipe.o
+	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/pmm.c -o ./build/pmm.o
+	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/vmm.c -o ./build/vmm.o
+	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/gdt.c -o ./build/gdt.o
+	gcc -I./src $(FLAGS) -std=gnu99 -c ./src/tss.c -o ./build/tss.o
 
 	ld -m elf_i386 -g -relocatable $(FILES) -o ./build/completeKernel.o
 
@@ -58,6 +68,7 @@ user_progs:
 run: all
 	qemu-system-x86_64 \
 	-serial stdio \
+	-device isa-debug-exit \
 	-drive format=raw,file=./bin/os.bin
 
 clean:

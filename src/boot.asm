@@ -34,7 +34,7 @@ start:
 	mov ch, 0x00
 	mov cl, 0x02
 	mov ah, 0x02
-	mov al, 64
+	mov al, 128
 	int 0x13
 
 	jc disk_read_error
@@ -99,7 +99,7 @@ PModeMain:
 	
 	mov esi, 0x00010000         
 	mov edi, KERNEL_START_ADDR  
-	mov ecx, (64 * 512) / 4  
+	mov ecx, (128 * 512) / 4  
 	rep movsd
 	
 	jmp CODE_OFFSET:KERNEL_START_ADDR
