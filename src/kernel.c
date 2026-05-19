@@ -706,6 +706,10 @@ void shell_loop()
         {
             fs_mkdir(cmd_buf + 6);
         }
+	else if (strncmp(cmd_buf, "touch ", 6) == 0)
+        {
+            fs_create_file(cmd_buf + 6);
+        }
         else if (strncmp(cmd_buf, "cd ", 3) == 0)
         {
             fs_cd(cmd_buf + 3);
@@ -816,6 +820,7 @@ void shell_loop()
             uart_print("  kill <pid>     - Termina un proces\n");
             uart_print("  wait <pid> [t] - Pune un proces in WAITING (t ticks, default 10)\n");
             uart_print("  exec <prog>    - Executa un program (u1, u2)\n");
+	    uart_print("  touch <nume>    - Creeaza un fisier \n");
             uart_print("Alte comenzi: mem, pmem, time, yield, write, save\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0)

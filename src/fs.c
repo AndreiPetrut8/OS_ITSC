@@ -55,53 +55,84 @@ fs_node_t* create_node(const char *name, entry_type_t type) {
     
     return node;
 }
-
 void fs_init() {
     disk_entry_t table[MAX_DISK_NODES];
     ata_read_sector(FS_START_SECTOR, (uint8_t*)table);
-
     if (table[0].is_used == 1 && m_strcmp(table[0].name, "root") == 0) {
         uart_print("FS: Restaurare sistem de fisiere...\n");
         
-        root = create_node(table[0].name, table[0].type);
-        current_dir = root;
-        for (int i=1; i<MAX_DISK_NODES;i++) {
+        fs_node_t *nodes_map[MAX_DISK_NODES];
+        for (int i = 0; i < MAX_DISK_NODES; i++) nodes_map[i] = NULL;
+
+        for (int i = 0; i < MAX_DISK_NODES; i++) {
             if (table[i].is_used) {
-                fs_node_t *new_node = create_node(table[i].name,table[i].type);
-                new_node->parent =root;
-                new_node->next =root->children;
-                root->children = new_node;
-            }}
+                nodes_map[i] = create_node(table[i].name, table[i].type);
+            }
+        }
+
+        root = nodes_map[0];
+        current_dir = root;
+
+        for (int i = 1; i < MAX_DISK_NODES; i++) {
+            if (table[i].is_used && nodes_map[i] != NULL) {
+                int p_idx = table[i].parent_idx;
+                
+                if (p_idx >= 0 && p_idx < MAX_DISK_NODES && nodes_map[p_idx] != NULL) {
+                    fs_node_t *parent_node = nodes_map[p_idx];
+                    fs_node_t *child_node = nodes_map[i];
+
+                    child_node->parent = parent_node;
+                    child_node->next = parent_node->children;
+                    parent_node->children = child_node;
+                }
+            }
+        }
     } else {
-        uart_print("FS: Creare sistem nou (Disc gol).\n");
+        uart_print("Creare sistem nou...\n");
         root = create_node("root", FS_DIRECTORY);
         current_dir = root;
     }
 }
 
-void fs_save_to_disk() {
-    disk_entry_t table[MAX_DISK_NODES];
-    for(int i=0; i < MAX_DISK_NODES; i++) table[i].is_used = 0;
 
-    // root pe 0
-    table[0].is_used = 1;
-    strcpy(table[0].name, root->name);
-    table[0].type = root->type;
-    table[0].parent_idx =-1;
+static int serialize_node(fs_node_t *node, disk_entry_t *table, int parent_index, int *current_idx) {
+  if (!node || *current_idx >= MAX_DISK_NODES){
+      return *current_idx;
+  }
 
-     int idx = 1;
-    fs_node_t *child =root->children;
-    while (child &&idx<MAX_DISK_NODES) {
-        table[idx].is_used = 1;
-        strcpy(table[idx].name, child->name);
-        table[idx].type= child->type;
-        table[idx].parent_idx = 0; // index root
-        idx++;
+    int my_index = *current_idx;
+    (*current_idx)++;
+    table[my_index].is_used = 1;
+    strcpy(table[my_index].name, node->name);
+    table[my_index].type = node->type;
+    table[my_index].parent_idx = parent_index;
+
+    fs_node_t *child = node->children;
+    while (child) {
+        serialize_node(child, table, my_index, current_idx);
         child = child->next;
     }
-    ata_write_sector(FS_START_SECTOR, (uint8_t*)table);
-    uart_print("FS: Salvat pe disc.\n");
+
+    return my_index;
 }
+
+void fs_save_to_disk() {
+    disk_entry_t table[MAX_DISK_NODES];
+    
+    for(int i = 0; i < MAX_DISK_NODES; i++) {
+        table[i].is_used = 0;
+        table[i].parent_idx = -1;
+    }
+
+    int total_nodes = 0;
+    
+    serialize_node(root, table, -1, &total_nodes);
+
+   
+    ata_write_sector(FS_START_SECTOR, (uint8_t*)table);
+    uart_print("Structura  a fost salvata pe disc.\n");
+}
+
 
 int fs_mkdir(const char *name){
     fs_node_t *new_dir = create_node(name, FS_DIRECTORY);
@@ -141,21 +172,80 @@ void fs_ls(void) {
     }
 }
 
+static void free_node_recursive(fs_node_t *node) {
+    if (!node) return;
+
+    fs_node_t *curr_child = node->children;
+    while (curr_child) {
+        fs_node_t *next_child = curr_child->next; 
+        free_node_recursive(curr_child);
+        curr_child = next_child;
+    }
+
+    if (node->data) {
+        kfree(node->data);
+    }
+
+    kfree(node);
+}
+
+
+
 void fs_rm(const char *name) {
-    fs_node_t *current= current_dir->children;
-    fs_node_t *prev =NULL;
+    
+    if (m_strcmp(name, "root") == 0) {
+        uart_print("Directorul root nu poate fi sters\n");
+        return;
+    }
+
+    fs_node_t *current = current_dir->children;
+    fs_node_t *prev = NULL;
+
     while (current) {
-        if (m_strcmp(name, current->name)== 0) {
-            if (prev)
-	      {prev->next=current->next;
-	      }
-            else {
-	      current_dir->children=current->next;
-	    }
-            kfree(current);
+        if (m_strcmp(name, current->name) == 0) {
+            
+            if (current == root) {
+                uart_print("Directorul root nu poate fi sters\n");
+                return;
+            }
+
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                current_dir->children = current->next;
+            }
+
+            free_node_recursive(current);
+            
+            uart_print("Elementul a fost sters cu succes\n");
             return;
         }
-        prev=current;
-        current=current->next;
+        
+        prev = current;
+        current = current->next;
     }
+
+    uart_print("Fisierul sau directorul nu a fost gasit\n");
+}
+
+int fs_create_file(const char *name) {
+    fs_node_t *curr = current_dir->children;
+    while (curr) {
+        if (m_strcmp(name, curr->name) == 0) {
+            uart_print("Fisierul sau directorul exista deja.\n");
+            return -1;
+        }
+        curr = curr->next;
+    }
+
+    fs_node_t *new_file = create_node(name, FS_FILE);
+    if (!new_file){
+      return -1;
+    }
+
+    new_file->parent = current_dir;
+    new_file->next = current_dir->children;
+    current_dir->children = new_file;
+
+    return 0;
 }
