@@ -25,5 +25,8 @@ void fs_ls(void);
 int fs_cd(const char *name);
 void fs_save_to_disk(void);
 void fs_load_from_disk(void);
+int fs_create_file(const char *name);
+int fs_write_file(const char *name, const char *content, uint32_t size);
+void fs_cat(const char *name);
 
 #endif

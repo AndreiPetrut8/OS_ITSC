@@ -749,14 +749,14 @@ void shell_loop()
             uart_print_int(t);
             uart_print("\n");
         }
-        else if (strncmp(cmd_buf, "write", 5) == 0)
-        {
-            char *msg = cmd_buf + 6;
-            uint32_t len = 0;
-            while (msg[len] != '\0')
-                len++;
-            syscall_write(msg, len);
-        }
+	// else if (strncmp(cmd_buf, "write", 5) == 0)
+	  // {
+	  // char *msg = cmd_buf + 6;
+	    //  uint32_t len = 0;
+	    //  while (msg[len] != '\0')
+	      //      len++;
+	    //   syscall_write(msg, len);
+	    // }
         else if (strncmp(cmd_buf, "yield", 5) == 0)
         {
             syscall_yield();
@@ -821,6 +821,7 @@ void shell_loop()
             uart_print("  wait <pid> [t] - Pune un proces in WAITING (t ticks, default 10)\n");
             uart_print("  exec <prog>    - Executa un program (u1, u2)\n");
 	    uart_print("  touch <nume>    - Creeaza un fisier \n");
+	    
             uart_print("Alte comenzi: mem, pmem, time, yield, write, save\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0)
@@ -830,6 +831,43 @@ void shell_loop()
         else if (strcmp(cmd_buf, "pmem") == 0)
         {
             heap_test_processes();
+        }
+        else if (strncmp(cmd_buf, "write ",6) == 0)
+        {
+	  uart_print("DA");
+            char *args = cmd_buf + 6;
+            char filename[32];
+            int i = 0;
+            while (args[i] != '\0' && args[i] != ' ' && i < 31) {
+                filename[i] = args[i];
+                i++;
+            }
+            filename[i] = '\0'; 
+
+          
+            if (args[i] == ' ') {
+                char *content = args + i + 1; 
+                uint32_t len = 0;
+                while (content[len] != '\0' && content[len] != '\r' && content[len] != '\n') {
+                    len++;
+                }
+
+                if (len > 0) {
+                    fs_write_file(filename, content, len);
+		    
+                }
+		else {
+                    uart_print("Eroare: Nu ai introdus text după numele fișierului.\n");
+                }
+            } 
+            else {
+                uart_print("Eroare Sintaxa: write <nume_fisier> <text>\n");
+            }
+        }
+	else if (strncmp(cmd_buf, "cat ", 4) == 0)
+        {
+            
+            fs_cat(cmd_buf + 4);
         }
         else if (strcmp(cmd_buf, "save") == 0)
         {
