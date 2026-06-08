@@ -39,6 +39,9 @@ start:
 
 	jc disk_read_error
 
+; Pentru VGA mode 13h
+	mov ax, 0x0013
+	int 0x10
 
 load_PM:
 	cli
