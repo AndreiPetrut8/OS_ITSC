@@ -12,7 +12,6 @@
 #include "tss.h"
 #include "vga.h"
 
-int demo_graphic = 0; // 1 = procese pe qemu
 static int vga_col = 0;
 static int vga_row = 0;
 
@@ -139,30 +138,17 @@ void simple_delay(int loops)
     }
 }
 
-////////////////////////////////////////////////////////////////
-// OPREA A FOST AICI
-////////////////////////////////////////////////////////////////
-
 void process1()
 {
-    if (demo_graphic)
-        term_print("[PID 1] Petrut\n");
-    else
-        kprint("[PID 1] Petrut\n");
+    term_print("[PID 1] Petrut\n", C_LGREEN);
 }
 void process2()
 {
-    if (demo_graphic)
-        term_print("[PID 2] Mio\n");
-    else
-        kprint("[PID 2] Mio\n");
+    term_print("[PID 2] Mio\n", C_LCYAN);
 }
 void process3()
 {
-    if (demo_graphic)
-        term_print("[PID 3] Oprea\n");
-    else
-        kprint("[PID 3] Oprea\n");
+    term_print("[PID 3] Oprea\n", C_LRED);
 }
 
 pcb_t proc_table[MAX_PROCESSES];
@@ -316,10 +302,6 @@ void scheduler_tick()
     }
 }
 
-////////////////////////////////////////////////////////////////
-// ATATA DE LA OPREA
-////////////////////////////////////////////////////////////////
-
 extern uint8_t _proc1_start;
 extern uint8_t _proc1_end;
 extern uint8_t _proc2_start;
@@ -352,10 +334,6 @@ uint32_t syscall_gettime()
     asm volatile("int $0x80" : "=a"(ticks) : "a"(3));
     return ticks;
 }
-
-////////////////////////////////////////////////////////////////
-// AM SCHIMBAT PUTIN SI AICI CA SUNT MAI MULTE STARI ACUM
-////////////////////////////////////////////////////////////////
 
 void list_processes()
 {
@@ -399,10 +377,6 @@ void list_processes()
         uart_print("Nu exista procese active.\n");
     }
 }
-
-////////////////////////////////////////////////////////////////
-// BUN GATA <3
-////////////////////////////////////////////////////////////////
 
 void kill_process(int pid)
 {
@@ -461,10 +435,6 @@ void wait_process(int pid, int ticks)
     uart_print_int(ticks);
     uart_print(" ticks.\n");
 }
-
-////////////////////////////////////////////////////////////////
-// SFARSIT COMANDA WAIT
-////////////////////////////////////////////////////////////////
 
 int load_and_run(int program_index)
 {
@@ -896,21 +866,23 @@ void shell_loop()
         else if (strcmp(cmd_buf, "help") == 0)
         {
             uart_print("Comenzi Sistem de Fisiere:\n");
-            uart_print("  ls                  - Listeaza fisierele\n");
-            uart_print("  mkdir <nume>        - Creaza director\n");
-            uart_print("  cd <nume>           - Schimba directorul (.. pt inapoi)\n");
-            uart_print("  rm <nume>           - Sterge fisier/director\n");
-            uart_print("  cat <nume>          - Afiseaza continutul unui fisier\n");
-            uart_print("  write <nume> <text> - Scrie text intr-un fisier\n");
-            uart_print("  touch <nume>        - Creeaza un fisier \n");
+            uart_print("  ls                      - Listeaza fisierele\n");
+            uart_print("  mkdir <nume>            - Creaza director\n");
+            uart_print("  cd <nume>               - Schimba directorul (.. pt inapoi)\n");
+            uart_print("  rm <nume>               - Sterge fisier/director\n");
+            uart_print("  cat <nume>              - Afiseaza continutul unui fisier\n");
+            uart_print("  write <nume> <text>     - Scrie text intr-un fisier\n");
+            uart_print("  touch <nume>            - Creeaza un fisier \n");
             uart_print("Comenzi Procese:\n");
             uart_print("  ps                      - Listeaza procesele si starile lor\n");
             uart_print("  kill <pid>              - Termina un proces\n");
             uart_print("  wait <pid> [t]          - Pune un proces in WAITING (t ticks, default 10)\n");
             uart_print("  exec <prog>             - Executa un program (u1, u2)\n");
             uart_print("  exec <prog1> | <prog2>  - Executa doua programe in pipeline (u1, u2)\n");
-
-            uart_print("Alte comenzi: mem, pmem, time, yield, save\n");
+            uart_print("Comenzi Memorie:\n");
+            uart_print("  mem                     - Testeaza heap-ul\n");
+            uart_print("  pmem                    - Testeaza memoria in procese\n");
+            uart_print("Alte comenzi: exit, time, yield, save\n");
         }
         else if (strcmp(cmd_buf, "mem") == 0)
         {
@@ -972,9 +944,9 @@ void shell_loop()
                 continue;
             }
 
-            demo_graphic = 1; // pentru procese
+            // demo_graphic = 1; // pentru procese
             term_enter();
-            term_print("=== Geamuri 98 :: Procese ===\n\n");
+            term_print("=== Geamuri 98 :: Procese ===\n\n", C_WHITE);
 
             proc_table[0].entry = process1;
             proc_table[0].remaining = 10000;

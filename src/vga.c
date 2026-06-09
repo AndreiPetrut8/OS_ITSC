@@ -127,9 +127,9 @@ void draw_boot_screen(void)
     for (int t = 0; t < 5; t++)
     {
         fill_rect(bx + 2, by + 2, (bw - 4) * (t + 1) / 5, bh - 4, C_BLUE);
-        boot_delay(400);
+        boot_delay(600);
     }
-    boot_delay(400);
+    boot_delay(600);
 }
 
 void draw_desktop(void)
@@ -160,6 +160,7 @@ void draw_desktop(void)
 static int term_x = 0;
 static int term_y = 0;
 static uint8_t term_fg = C_WHITE;
+static uint8_t term_color;
 
 void term_enter(void)
 {
@@ -190,7 +191,7 @@ static void term_newline(void)
     }
 }
 
-void term_print(const char *s)
+void term_print(const char *s, uint8_t term_color)
 {
     while (*s)
     {
@@ -205,7 +206,7 @@ void term_print(const char *s)
         }
         else
         {
-            draw_char(term_x * 8, term_y * LINE_H, c, term_fg);
+            draw_char(term_x * 8, term_y * LINE_H, c, term_color);
             term_x++;
             if (term_x >= TERM_COLS)
                 term_newline();

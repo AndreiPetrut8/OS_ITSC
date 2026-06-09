@@ -35,4 +35,4 @@ void draw_boot_screen(void);
 void draw_desktop(void);
 
 void term_enter(void);
-void term_print(const char *s);
+void term_print(const char *s, uint8_t term_color);
