@@ -902,12 +902,13 @@ void shell_loop()
             uart_print("  rm <nume>           - Sterge fisier/director\n");
             uart_print("  cat <nume>          - Afiseaza continutul unui fisier\n");
             uart_print("  write <nume> <text> - Scrie text intr-un fisier\n");
+            uart_print("  touch <nume>        - Creeaza un fisier \n");
             uart_print("Comenzi Procese:\n");
-            uart_print("  ps             - Listeaza procesele si starile lor\n");
-            uart_print("  kill <pid>     - Termina un proces\n");
-            uart_print("  wait <pid> [t] - Pune un proces in WAITING (t ticks, default 10)\n");
-            uart_print("  exec <prog>    - Executa un program (u1, u2)\n");
-            uart_print("  touch <nume>   - Creeaza un fisier \n");
+            uart_print("  ps                      - Listeaza procesele si starile lor\n");
+            uart_print("  kill <pid>              - Termina un proces\n");
+            uart_print("  wait <pid> [t]          - Pune un proces in WAITING (t ticks, default 10)\n");
+            uart_print("  exec <prog>             - Executa un program (u1, u2)\n");
+            uart_print("  exec <prog1> | <prog2>  - Executa doua programe in pipeline (u1, u2)\n");
 
             uart_print("Alte comenzi: mem, pmem, time, yield, save\n");
         }
@@ -921,7 +922,6 @@ void shell_loop()
         }
         else if (strncmp(cmd_buf, "write ", 6) == 0)
         {
-            uart_print("DA");
             char *args = cmd_buf + 6;
             char filename[32];
             int i = 0;
