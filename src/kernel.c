@@ -805,6 +805,16 @@ void shell_loop()
         {
             syscall_yield();
         }
+        else if (strcmp(cmd_buf, "preempt") == 0)
+        {
+            preemptive_mode = 1;
+            uart_print("Mod preemptiv activat.\n");
+        }
+        else if (strcmp(cmd_buf, "coop") == 0)
+        {
+            preemptive_mode = 0;
+            uart_print("Mod cooperativ activat.\n");
+        }
         else if (strncmp(cmd_buf, "exec ", 5) == 0)
         {
             char *msg = cmd_buf + 5;
@@ -874,6 +884,8 @@ void shell_loop()
             uart_print("  write <nume> <text>     - Scrie text intr-un fisier\n");
             uart_print("  touch <nume>            - Creeaza un fisier \n");
             uart_print("Comenzi Procese:\n");
+            uart_print("  preempt                 - Activeaza modul preemptiv (Activat by default)\n");
+            uart_print("  coop                    - Activeaza modul cooperativ\n");
             uart_print("  ps                      - Listeaza procesele si starile lor\n");
             uart_print("  kill <pid>              - Termina un proces\n");
             uart_print("  wait <pid> [t]          - Pune un proces in WAITING (t ticks, default 10)\n");
